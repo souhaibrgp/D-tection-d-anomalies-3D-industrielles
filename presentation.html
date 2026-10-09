@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMAD-Net — Présentation Détaillée</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: rgba(255,255,255,0.04);
+            --bg-card-hover: rgba(255,255,255,0.07);
+            --accent-blue: #4f8cff;
+            --accent-purple: #a855f7;
+            --accent-cyan: #22d3ee;
+            --accent-green: #34d399;
+            --accent-orange: #fb923c;
+            --accent-pink: #f472b6;
+            --accent-red: #ef4444;
+            --accent-yellow: #facc15;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(255,255,255,0.08);
+        }
+
+        html { font-size: 16px; scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 10% 20%, rgba(79,140,255,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(168,85,247,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 50% 50%, rgba(34,211,238,0.04) 0%, transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ── SLIDES ── */
+        .slides-wrapper { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+
+        .slide {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            padding: 2.5rem 4.5rem 5rem;
+            opacity: 0; transform: translateX(60px);
+            transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);
+            pointer-events: none; z-index: 1;
+            overflow-y: auto;
+        }
+        .slide::-webkit-scrollbar { width: 4px; }
+        .slide::-webkit-scrollbar-track { background: transparent; }
+        .slide::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        .slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; z-index: 2; }
+        .slide.exit-left { opacity: 0; transform: translateX(-60px); }
+
+        /* ── NAV ── */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.8rem 3rem;
+            background: rgba(10,14,26,0.9); backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border); z-index: 100;
+        }
+        .nav-dots { display: flex; gap: 8px; }
+        .nav-dot {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: var(--text-muted); border: none; cursor: pointer; transition: all 0.3s;
+        }
+        .nav-dot.active { background: var(--accent-blue); box-shadow: 0 0 10px rgba(79,140,255,0.5); transform: scale(1.3); }
+        .nav-btn {
+            background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+            color: var(--text-primary); padding: 0.45rem 1.2rem; border-radius: 8px;
+            cursor: pointer; font-family: 'Inter'; font-size: 0.8rem; font-weight: 500; transition: all 0.3s;
+        }
+        .nav-btn:hover { background: rgba(79,140,255,0.15); border-color: var(--accent-blue); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .slide-counter { font-family: 'JetBrains Mono'; font-size: 0.75rem; color: var(--text-muted); }
+
+        /* ── TYPOGRAPHY ── */
+        .slide-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+            color: var(--accent-cyan); margin-bottom: 0.8rem;
+            padding: 3px 12px; background: rgba(34,211,238,0.08);
+            border: 1px solid rgba(34,211,238,0.15); border-radius: 20px; width: fit-content;
+        }
+        h1 { font-size: 3rem; font-weight: 800; line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 0.8rem; }
+        h1 .gradient-text {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        h2 { font-size: 1.7rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.5px; }
+        h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .subtitle { font-size: 1.05rem; color: var(--text-secondary); line-height: 1.6; max-width: 650px; }
+        .section-divider { width: 50px; height: 3px; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 2px; margin-bottom: 1.2rem; }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.1rem; transition: all 0.3s;
+        }
+        .card:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.12); }
+        .card p, .card-text { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6; }
+        .card-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; margin-bottom: 0.6rem; }
+
+        /* ── GRIDS ── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.8rem; }
+
+        /* ── BADGES ── */
+        .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 600; padding: 2px 8px; border-radius: 5px; letter-spacing: 0.3px; }
+        .badge-blue { background: rgba(79,140,255,0.12); color: var(--accent-blue); border: 1px solid rgba(79,140,255,0.2); }
+        .badge-purple { background: rgba(168,85,247,0.12); color: var(--accent-purple); border: 1px solid rgba(168,85,247,0.2); }
+        .badge-green { background: rgba(52,211,153,0.12); color: var(--accent-green); border: 1px solid rgba(52,211,153,0.2); }
+        .badge-orange { background: rgba(251,146,60,0.12); color: var(--accent-orange); border: 1px solid rgba(251,146,60,0.2); }
+        .badge-cyan { background: rgba(34,211,238,0.12); color: var(--accent-cyan); border: 1px solid rgba(34,211,238,0.2); }
+        .badge-pink { background: rgba(244,114,182,0.12); color: var(--accent-pink); border: 1px solid rgba(244,114,182,0.2); }
+        .badge-red { background: rgba(239,68,68,0.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.2); }
+        .badge-yellow { background: rgba(250,204,21,0.12); color: var(--accent-yellow); border: 1px solid rgba(250,204,21,0.2); }
+
+        /* ── TABLE ── */
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.72rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+        .data-table th { background: rgba(79,140,255,0.08); color: var(--accent-blue); font-weight: 600; text-align: center; padding: 0.55rem 0.6rem; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        .data-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); text-align: center; }
+        .data-table td:first-child { text-align: left; font-weight: 500; color: var(--text-primary); }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .val-best { color: var(--accent-green); font-weight: 700; font-family: 'JetBrains Mono'; }
+        .val-good { color: var(--accent-cyan); font-weight: 600; font-family: 'JetBrains Mono'; }
+        .val-med { color: var(--accent-orange); font-weight: 500; font-family: 'JetBrains Mono'; }
+        .val-low { color: var(--text-muted); font-family: 'JetBrains Mono'; }
+        .data-table tr.row-avg td { background: rgba(79,140,255,0.06); font-weight: 700; border-top: 2px solid var(--accent-blue); color: var(--text-primary); }
+
+        /* ── ARCH DIAGRAM ── */
+        .arch-diagram { display: flex; flex-direction: column; gap: 0.5rem; padding: 1.2rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 14px; }
+        .arch-row { display: flex; align-items: center; gap: 0.6rem; justify-content: center; }
+        .arch-box { padding: 0.5rem 0.8rem; border-radius: 9px; font-size: 0.68rem; font-weight: 600; text-align: center; border: 1px solid; min-width: 90px; }
+        .arch-box .arch-dim { display: block; font-family: 'JetBrains Mono'; font-size: 0.55rem; font-weight: 400; opacity: 0.7; margin-top: 2px; }
+        .arch-box.vit { background: rgba(79,140,255,0.1); border-color: rgba(79,140,255,0.3); color: var(--accent-blue); }
+        .arch-box.fpn { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.3); color: var(--accent-cyan); }
+        .arch-box.cmca { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); color: var(--accent-purple); }
+        .arch-box.student { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: var(--accent-green); }
+        .arch-box.fusion { background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.3); color: var(--accent-orange); }
+        .arch-box.output { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--accent-red); }
+        .arch-box.input { background: rgba(244,114,182,0.1); border-color: rgba(244,114,182,0.3); color: var(--accent-pink); }
+        .arch-arrow { text-align: center; color: var(--text-muted); font-size: 0.9rem; line-height: 1; }
+        .arch-label { font-size: 0.5rem; background: var(--bg-dark); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); color: var(--text-muted); position: absolute; right: -8px; top: -7px; }
+
+        /* ── PHASE CARDS ── */
+        .phase-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem; position: relative; overflow: hidden; }
+        .phase-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .phase-card.p1::before { background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); }
+        .phase-card.p2::before { background: linear-gradient(90deg, var(--accent-orange), var(--accent-pink)); }
+        .phase-num { font-family: 'JetBrains Mono'; font-size: 0.6rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-bottom: 0.6rem; display: inline-block; }
+        .p1 .phase-num { background: rgba(79,140,255,0.15); color: var(--accent-blue); }
+        .p2 .phase-num { background: rgba(251,146,60,0.15); color: var(--accent-orange); }
+        .detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.73rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .detail-row .lbl { color: var(--text-muted); font-size: 0.65rem; min-width: 72px; flex-shrink: 0; font-weight: 500; }
+
+        /* ── CODE BLOCK ── */
+        .code-block { background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 0.9rem; font-family: 'JetBrains Mono'; font-size: 0.65rem; line-height: 1.7; color: var(--text-secondary); overflow-x: auto; }
+        .code-block .kw { color: var(--accent-purple); }
+        .code-block .fn { color: var(--accent-blue); }
+        .code-block .cm { color: var(--text-muted); font-style: italic; }
+        .code-block .st { color: var(--accent-green); }
+        .code-block .num { color: var(--accent-orange); }
+        .code-block .var { color: var(--accent-cyan); }
+
+        /* ── FORMULA ── */
+        .formula { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 1rem; font-family: 'JetBrains Mono'; font-size: 0.72rem; color: var(--accent-cyan); text-align: center; margin: 0.4rem 0; }
+
+        /* ── INSIGHT ── */
+        .insight { background: linear-gradient(135deg, rgba(168,85,247,0.08), rgba(79,140,255,0.08)); border: 1px solid rgba(168,85,247,0.2); border-radius: 10px; padding: 0.8rem 1.1rem; }
+        .insight-title { font-size: 0.68rem; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.3rem; }
+        .insight p { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.6; }
+
+        /* ── CONVERGENCE CHART (CSS) ── */
+        .conv-chart { display: flex; align-items: flex-end; gap: 3px; height: 80px; padding: 0.5rem 0; }
+        .conv-bar { flex: 1; border-radius: 3px 3px 0 0; transition: all 0.3s; min-width: 3px; position: relative; }
+        .conv-bar:hover { opacity: 0.8; }
+        .conv-bar .conv-tooltip { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.5rem; font-family: 'JetBrains Mono'; color: var(--text-muted); white-space: nowrap; opacity: 0; transition: opacity 0.2s; }
+        .conv-bar:hover .conv-tooltip { opacity: 1; }
+
+        /* ── METRICS HERO ── */
+        .metric-big { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem; text-align: center; }
+        .metric-big .mv { font-family: 'JetBrains Mono'; font-size: 1.6rem; font-weight: 700; }
+        .metric-big .ml { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 0.2rem; }
+        .metric-big.green .mv { color: var(--accent-green); }
+        .metric-big.blue .mv { color: var(--accent-blue); }
+        .metric-big.purple .mv { color: var(--accent-purple); }
+        .metric-big.cyan .mv { color: var(--accent-cyan); }
+        .metric-big.orange .mv { color: var(--accent-orange); }
+
+        /* ── PIPELINE ── */
+        .pipeline { display: flex; align-items: center; gap: 0; margin: 0.6rem 0; flex-wrap: wrap; justify-content: center; }
+        .pipe-step { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 0.7rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 9px; min-width: 80px; text-align: center; }
+        .pipe-step .ps-title { font-size: 0.65rem; font-weight: 600; }
+        .pipe-step .ps-dim { font-family: 'JetBrains Mono'; font-size: 0.52rem; color: var(--text-muted); }
+        .pipe-arrow { font-size: 1rem; color: var(--text-muted); padding: 0 0.2rem; }
+
+        /* ── GRADIENT FLOW ── */
+        .gflow { display: flex; flex-direction: column; gap: 0.3rem; }
+        .gflow-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; }
+        .gflow-box { padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.65rem; font-weight: 600; text-align: center; }
+        .gflow-arrow { color: var(--text-muted); font-size: 0.8rem; }
+        .gflow-box.grad { border: 2px dashed; }
+        .gflow-box.no-grad { border: 2px solid; opacity: 0.5; }
+
+        /* ── TITLE SLIDE ── */
+        .title-slide { justify-content: center; align-items: center; text-align: center; padding: 3rem; }
+        .title-slide h1 { font-size: 3.8rem; margin-bottom: 1.2rem; }
+        .title-slide .subtitle { max-width: 700px; margin: 0 auto 1.5rem; font-size: 1.1rem; }
+        .title-badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 0.8rem; }
+        .title-badges .badge { font-size: 0.72rem; padding: 4px 12px; }
+        .title-meta { margin-top: 2rem; display: flex; gap: 1.8rem; justify-content: center; color: var(--text-muted); font-size: 0.75rem; }
+
+        .cat-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 0.4rem; }
+        .cat-tag { font-size: 0.6rem; padding: 2px 8px; border-radius: 5px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text-secondary); }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .slide.active .a1 { animation: fadeInUp 0.4s 0.05s both; }
+        .slide.active .a2 { animation: fadeInUp 0.4s 0.12s both; }
+        .slide.active .a3 { animation: fadeInUp 0.4s 0.2s both; }
+        .slide.active .a4 { animation: fadeInUp 0.4s 0.28s both; }
+        .slide.active .a5 { animation: fadeInUp 0.4s 0.36s both; }
+        .slide.active .a6 { animation: fadeInUp 0.4s 0.44s both; }
+
+        @media (max-width: 1200px) {
+            .slide { padding: 2rem 2.5rem 5rem; }
+            h1 { font-size: 2.2rem; }
+            .title-slide h1 { font-size: 2.8rem; }
+            .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="slides-wrapper">
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 1 : TITRE                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide title-slide active" data-index="0">
+    <div class="a1"><div class="slide-tag" style="margin:0 auto 1rem;">🧠 Projet Deep Learning — Détection d'anomalies 3D</div></div>
+    <h1 class="a2"><span class="gradient-text">CMAD-Net</span></h1>
+    <p class="subtitle a3">
+        <strong>Cross-Modal Attention Detection Network</strong><br>
+        Détection d'anomalies 3D par <strong>Reverse Distillation</strong> avec attention croisée entre <strong>RGB</strong> et <strong>Depth</strong>.
+    </p>
+    <div class="title-badges a4">
+        <span class="badge badge-blue">🔬 ViT-B/16 DINOv2</span>
+        <span class="badge badge-purple">⚡ Cross-Modal Attention</span>
+        <span class="badge badge-green">🎓 Teacher-Student</span>
+        <span class="badge badge-orange">📊 MVTec 3D-AD</span>
+        <span class="badge badge-cyan">🔄 Reverse Distillation</span>
+    </div>
+    <div class="title-meta a5">
+        <span>📐 PyTorch + timm</span>
+        <span>🖼️ 10 catégories</span>
+        <span>📏 224×224</span>
+        <span>🌱 Seed 42</span>
+        <span>⚡ CUDA / CPU</span>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 2 : PROBLÈME & CONTEXTE                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide" data-index="1">
+    <div class="slide-tag a1">📋 Slide 2 — Problématique & Approche</div>
+    <h2 class="a2">Contexte, Problème & Solution</h2>
+    <div class="section-divider a2"></div>
+
+    <div class="grid-2 a3">
+        <div>
+            <div class="card" style="margin-bottom: 0.8rem;">
+                <div class="card-icon" style="background:rgba(239,68,68,0.12);">🏭</div>
+                <h3>Problème Industriel</h3>
+                <p>Détecter des <strong>défauts rares et imprévisibles</strong> (fissures, contaminations, trous, déformations) sur des objets 3D en production. Les anomalies sont infiniment variées → impossible de toutes les apprendre.</p>
+            </div>
+            <div class="card" style="margin-bottom: 0.8rem;">
+                <div class="card-icon" style="background:rgba(79,140,255,0.12);">🎯</div>
+                <h3>Approche Non-Supervisée</h3>
+                <p>On entraîne <strong>uniquement sur des échantillons normaux</strong>. Le modèle apprend ce qui est "normal". En inférence, tout ce qui <strong>dévie du normal appris</strong> est signalé comme anomalie, sans jamais avoir vu de défaut.</p>
+            </div>
+            <div class="card">
+                <div class="card-icon" style="background:rgba(168,85,247,0.12);">🔑</div>
+                <h3>Innovation CMAD-Net</h3>
+                <p><strong>3 innovations clés</strong> :</p>
+                <div style="margin-top:0.4rem; font-size:0.78rem; color:var(--text-secondary); line-height:1.7;">
+                    <div>1. <strong style="color:var(--accent-purple);">Cross-Modal Attention</strong> — Fusion intelligente RGB ↔ Depth</div>
+                    <div>2. <strong style="color:var(--accent-green);">Reverse Distillation</strong> — Teacher-Student pour détection</div>
+                    <div>3. <strong style="color:var(--accent-orange);">Adaptive Fusion</strong> — Poids par catégorie d'objet</div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="card" style="margin-bottom: 0.8rem;">
+                <div class="card-icon" style="background:rgba(34,211,238,0.12);">📦</div>
+                <h3>Dataset : MVTec 3D-AD</h3>
+                <p>Benchmark standard — 10 catégories d'objets réels avec images RGB + scans 3D. Chaque catégorie a un train set (normaux), validation et test (normaux + anomaux avec ground truth).</p>
+                <div class="cat-grid" style="margin-top:0.6rem;">
+                    <span class="cat-tag">🥯 bagel</span><span class="cat-tag">🔌 cable_gland</span>
+                    <span class="cat-tag">🥕 carrot</span><span class="cat-tag">🍪 cookie</span>
+                    <span class="cat-tag">🪵 dowel</span><span class="cat-tag">🧽 foam</span>
+                    <span class="cat-tag">🍑 peach</span><span class="cat-tag">🥔 potato</span>
+                    <span class="cat-tag">🪢 rope</span><span class="cat-tag">🛞 tire</span>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom: 0.8rem;">
+                <div class="card-icon" style="background:rgba(52,211,153,0.12);">📐</div>
+                <h3>Données Multi-Modales</h3>
+                <div class="detail-row"><span class="lbl">RGB</span> Image couleur (PNG) → resize 224×224, normalize ImageNet</div>
+                <div class="detail-row"><span class="lbl">XYZ/Depth</span> Nuage de points 3D (TIFF) → extraction canal Z</div>
+                <div class="detail-row"><span class="lbl">Normal Map</span> Sobel (k=3/5/7 selon catégorie) → surface normals</div>
+                <div class="detail-row"><span class="lbl">GT Mask</span> Masque binaire des anomalies (test seulement)</div>
+            </div>
+            <div class="insight">
+                <div class="insight-title">💡 Paradigme Reverse Distillation</div>
+                <p>Un <strong>Student</strong> apprend à reconstruire les features du <strong>Teacher</strong> sur les normaux. En inférence, les anomalies ne sont pas reconstruites → <strong>discordance = anomalie</strong>.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 3 : ARCHITECTURE                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide" data-index="2">
+    <div class="slide-tag a1">🏗️ Slide 3 — Architecture Détaillée</div>
+    <h2 class="a2">Architecture CMAD-Net</h2>
+    <div class="section-divider a2"></div>
+
+    <div class="grid-2 a3">
+        <!-- Architecture Diagram -->
+        <div class="arch-diagram" style="position:relative;">
+            <div style="position:absolute; top:8px; right:12px; font-size:0.55rem; color:var(--text-muted);">Memory Bank + FP Filter Pipeline</div>
+            <div class="arch-row">
+                <div class="arch-box input">🖼️ RGB<span class="arch-dim">(B, 3, 224, 224)</span></div>
+                <div style="width:60px;"></div>
+                <div class="arch-box input">🗺️ Normal Map<span class="arch-dim">(B, 3, 224, 224)</span></div>
+            </div>
+            <div class="arch-arrow">↓ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↓</div>
+            <div class="arch-row">
+                <div class="arch-box vit" style="min-width:250px; position:relative;">
+                    🔒 ViT-B/16 DINOv2 (Gelé, Partagé)
+                    <span class="arch-dim">Hooks L3, L6, L9, L12 → 4 × (B, 768, 14, 14)</span>
+                    <span class="arch-label">FROZEN</span>
+                </div>
+            </div>
+            <div class="arch-arrow">↓ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↓</div>
+            <div class="arch-row">
+                <div class="arch-box fpn">FPN RGB<span class="arch-dim">768→256 × 4</span></div>
+                <div style="width:40px;"></div>
+                <div class="arch-box fpn">FPN Depth<span class="arch-dim">768→256 × 4</span></div>
+            </div>
+            <div class="arch-arrow">↘ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↙</div>
+            <div class="arch-row">
+                <div class="arch-box cmca" style="min-width:220px;">
+                    ⚡ CMCA (8 têtes × 4 niveaux)
+                    <span class="arch-dim">Attention croisée symétrique RGB↔Depth</span>
+                </div>
+            </div>
+            <div class="arch-arrow">↓ concat 4 niveaux → (B, 1024, 14, 14)</div>
+            <div class="arch-row">
+                <div class="arch-box student" style="min-width:220px;">
+                    🗄️ Memory Bank (μ, σ)
+                    <span class="arch-dim">dist = mean(((x − μ) / σ)²) → anomaly map</span>
+                </div>
+            </div>
+            <div class="arch-arrow">↓ map_rgb &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↓ map_depth</div>
+            <div class="arch-row">
+                <div class="arch-box" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:var(--accent-red); min-width:200px;">
+                    🛡️ FP Filter Module
+                    <span class="arch-dim">Suppression faux positifs (bg_estimator)</span>
+                </div>
+            </div>
+            <div class="arch-arrow">↓ cartes filtrées</div>
+            <div class="arch-row">
+                <div class="arch-box fusion">🔀 Adaptive Fusion<span class="arch-dim">softmax(w) per category</span></div>
+                <div style="width:12px; text-align:center; color:var(--text-muted);">→</div>
+                <div class="arch-box output">🎯 Anomaly Map<span class="arch-dim">(B, 1, 224, 224)</span></div>
+            </div>
+        </div>
+
+        <!-- Module Details -->
+        <div style="display:flex; flex-direction:column; gap:0.7rem;">
+            <div class="card">
+                <h3 style="color:var(--accent-blue);">🔒 ViT-B/16 DINOv2 — Backbone</h3>
+                <p>Modèle <code>vit_base_patch16_224.dino</code> via <strong>timm</strong>. <strong>Totalement gelé</strong> — sert de feature extractor universel. Poids <strong>partagés</strong> entre RGB et Depth. Forward hooks aux blocs 3, 6, 9, 12.</p>
+                <div style="margin-top:0.4rem;"><span class="badge badge-blue">768 dim</span> <span class="badge badge-blue">14×14</span> <span class="badge badge-blue">~86M params gelés</span></div>
+            </div>
+            <div class="card">
+                <h3 style="color:var(--accent-purple);">⚡ CMCA — Cross-Modal Cross-Attention</h3>
+                <p><strong>Module central</strong>. <strong>Q(RGB) × K,V(Depth)</strong> → RGB enrichi. <strong>Q(Depth) × K,V(RGB)</strong> → Depth enrichi. Résiduel + LayerNorm + FFN (256→1024→256, GELU).</p>
+                <div style="margin-top:0.4rem;"><span class="badge badge-purple">8 têtes</span> <span class="badge badge-purple">4 niveaux</span> <span class="badge badge-purple">0.1 dropout</span></div>
+            </div>
+            <div class="card">
+                <h3 style="color:var(--accent-green);">🗄️ Memory Bank — Statistiques normales</h3>
+                <p>Composant <strong>non-paramétrique</strong>. Stocke <strong>mean</strong> et <strong>std</strong> des features normales (concaténation 4 niveaux FPN → 1024 canaux). Détection par <strong>distance pseudo-Mahalanobis</strong> : <code>((x − μ) / σ)²</code>.</p>
+                <div style="margin-top:0.4rem;"><span class="badge badge-green">Non-paramétrique</span> <span class="badge badge-green">CPU storage</span></div>
+            </div>
+            <div class="card">
+                <h3 style="color:var(--accent-red);">🛡️ FP Filter — Suppression faux positifs</h3>
+                <p>Apprend un <strong>masque de régions naturellement actives</strong> via un <code>bg_estimator</code> (Conv 3×3→128→64→1 + Sigmoid). Paramètres apprenables : <strong>adaptive_threshold</strong> et <strong>suppression_factor</strong>.</p>
+                <div style="margin-top:0.4rem;"><span class="badge badge-red">Conv2d bg_estimator</span> <span class="badge badge-red">Seuillage adaptatif</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight a4" style="margin-top:0.8rem;">
+        <div class="insight-title">🔍 Détection d'anomalies par Memory Bank</div>
+        <p>
+            <strong>anomaly_map = mean(((features − μ) / σ)²)</strong> — Distance pseudo-Mahalanobis normalisée. Sur les normaux → features proches de μ → map ≈ 0. Sur les anomalies → features éloignées → map ↑.
+            Le <strong>FP Filter</strong> supprime les faux positifs : <code>filtered = map × (1 − supp × bg_score)</code>. Les maps sont fusionnées par <strong>AdaptiveFusion</strong> (poids softmax par catégorie).
+        </p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 4 : ENTRAÎNEMENT EN DÉTAIL                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide" data-index="3">
+    <div class="slide-tag a1">⚙️ Slide 4 — Pipeline d'Entraînement Détaillé</div>
+    <h2 class="a2">Entraînement : 3 Phases par Catégorie</h2>
+    <div class="section-divider a2"></div>
+
+    <div class="grid-2 a3">
+        <!-- Phase 1 -->
+        <div style="display:flex; flex-direction:column; gap:0.7rem;">
+            <div class="phase-card p1">
+                <div class="phase-num">PHASE 1 — ENTRAÎNEMENT FPN + CMCA</div>
+                <h3>Aligner les features RGB et Depth</h3>
+                <p class="card-text" style="margin-bottom:0.6rem;">
+                    On entraîne le FPN et le CMCA pour que les features cross-modales soient <strong>cohérentes</strong> (Consistency) et <strong>diversifiées</strong> entre niveaux (Diversity).
+                </p>
+                <div style="background:rgba(0,0,0,0.2); border-radius:8px; padding:0.6rem; margin-bottom:0.6rem;">
+                    <div style="font-size:0.6rem; font-weight:600; color:var(--accent-blue); margin-bottom:0.3rem;">📋 CONFIGURATION</div>
+                    <div class="detail-row"><span class="lbl">Entraînés</span> <strong>FPN_rgb, FPN_depth, CMCA</strong></div>
+                    <div class="detail-row"><span class="lbl">Gelé</span> ViT, FP Filter, Fusion</div>
+                    <div class="detail-row"><span class="lbl">Données</span> Train set (normaux), batch=16</div>
+                    <div class="detail-row"><span class="lbl">Epochs</span> <strong>100</strong> (local) / 50 (Kaggle)</div>
+                    <div class="detail-row"><span class="lbl">Optimizer</span> <strong>AdamW</strong> (lr=1e-4, wd=1e-4)</div>
+                    <div class="detail-row"><span class="lbl">Scheduler</span> CosineAnnealingLR</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); border-radius:8px; padding:0.6rem;">
+                    <div style="font-size:0.6rem; font-weight:600; color:var(--accent-cyan); margin-bottom:0.3rem;">📉 LOSSES</div>
+                    <div class="code-block" style="font-size:0.58rem; margin-bottom:0.4rem;">
+<span class="cm"># Consistency : aligner RGB ↔ Depth</span>
+ℒ_cons = <span class="fn">mean</span>(<span class="num">1</span> - <span class="fn">cos_sim</span>(feat_rgb, feat_depth))
+
+<span class="cm"># Diversity : décorréler les niveaux FPN</span>
+ℒ_div = ‖F_norm_i<sup>T</sup> × F_norm_j‖²
+
+<span class="cm"># Total :</span>
+ℒ = <span class="num">1.0</span> × ℒ_cons + <span class="num">0.1</span> × ℒ_div
+                    </div>
+                    <div style="font-size:0.65rem; color:var(--text-secondary); line-height:1.5;">
+                        <strong style="color:var(--accent-cyan);">Consistency</strong> — Force l'alignement RGB↔Depth sur les normaux<br>
+                        <strong style="color:var(--accent-orange);">Diversity</strong> — Empêche la redondance entre niveaux FPN
+                    </div>
+                </div>
+            </div>
+
+            <!-- Convergence -->
+            <div class="card">
+                <h3>📉 Convergence Phase 1 (bagel)</h3>
+                <div style="display:flex; gap:1.5rem; font-size:0.68rem;">
+                    <div>
+                        <div style="color:var(--text-muted); font-size:0.6rem; margin-bottom:0.2rem;">LOSS</div>
+                        <div><span style="color:var(--accent-red);">Ep 1:</span> 0.552</div>
+                        <div><span style="color:var(--accent-orange);">Ep 10:</span> 0.005</div>
+                        <div><span style="color:var(--accent-cyan);">Ep 50:</span> 0.001</div>
+                        <div><span style="color:var(--accent-green);">Ep 100:</span> 0.0004</div>
+                    </div>
+                    <div>
+                        <div style="color:var(--text-muted); font-size:0.6rem; margin-bottom:0.2rem;">RÉDUCTION</div>
+                        <div>Loss: <strong style="color:var(--accent-green);">−99.9%</strong></div>
+                        <div style="margin-top:0.3rem; font-size:0.58rem; color:var(--text-muted);">Convergence rapide<br>Plateau ~epoch 80</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 2 + Phase 3 + Test -->
+        <div style="display:flex; flex-direction:column; gap:0.7rem;">
+            <div class="phase-card p2">
+                <div class="phase-num">PHASE 2 — CONSTRUCTION MEMORY BANK</div>
+                <h3>Stocker les statistiques normales</h3>
+                <p class="card-text" style="margin-bottom:0.4rem;">
+                    Passe tout le <strong>train set</strong> en mode eval. Concatène les 4 niveaux FPN (→ 1024 canaux) et calcule <strong>mean</strong> et <strong>std</strong> sur tous les échantillons normaux.
+                </p>
+                <div class="detail-row"><span class="lbl">Modules</span> <strong>Aucun entraînement</strong></div>
+                <div class="detail-row"><span class="lbl">Données</span> Train set (normaux)</div>
+                <div class="detail-row"><span class="lbl">Stockage</span> Features accumulées en CPU</div>
+                <div class="detail-row"><span class="lbl">Résultat</span> μ, σ de dimension (1024, 14, 14)</div>
+            </div>
+
+            <div class="phase-card" style="position:relative; overflow:hidden;">
+                <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--accent-red), var(--accent-orange));"></div>
+                <div class="phase-num" style="background:rgba(239,68,68,0.15); color:var(--accent-red);">PHASE 3 — CALIBRATION FP FILTER</div>
+                <h3>Supprimer les faux positifs</h3>
+                <p class="card-text" style="margin-bottom:0.4rem;">
+                    Entraîne le <strong>FP Filter</strong> et la <strong>Fusion</strong> sur le validation set. La loss minimise les scores d'anomalies sur les normaux (ils devraient être à 0).
+                </p>
+                <div class="detail-row"><span class="lbl">Entraînés</span> <strong>FP Filter + Adaptive Fusion</strong></div>
+                <div class="detail-row"><span class="lbl">Gelé</span> ViT, FPN, CMCA</div>
+                <div class="detail-row"><span class="lbl">Données</span> Validation set (normaux)</div>
+                <div class="detail-row"><span class="lbl">Epochs</span> <strong>20</strong></div>
+                <div class="detail-row"><span class="lbl">Optimizer</span> <strong>Adam</strong> (lr=1e-3)</div>
+                <div class="detail-row"><span class="lbl">Loss</span> mean(fused²) + mean(rgb²) + mean(depth²)</div>
+            </div>
+
+            <!-- Pipeline Test -->
+            <div class="card">
+                <h3>🧪 Pipeline de Test</h3>
+                <div class="pipeline">
+                    <div class="pipe-step"><span class="ps-title">ViT→FPN→CMCA</span><span class="ps-dim">features</span></div>
+                    <span class="pipe-arrow">→</span>
+                    <div class="pipe-step"><span class="ps-title">Memory Bank</span><span class="ps-dim">(x−μ)/σ → dist</span></div>
+                    <span class="pipe-arrow">→</span>
+                    <div class="pipe-step"><span class="ps-title">FP Filter</span><span class="ps-dim">suppression fond</span></div>
+                    <span class="pipe-arrow">→</span>
+                    <div class="pipe-step"><span class="ps-title">Fusion</span><span class="ps-dim">w_rgb + w_depth</span></div>
+                    <span class="pipe-arrow">→</span>
+                    <div class="pipe-step"><span class="ps-title">Gaussian</span><span class="ps-dim">σ = 4</span></div>
+                    <span class="pipe-arrow">→</span>
+                    <div class="pipe-step"><span class="ps-title">Métriques</span><span class="ps-dim">AUROC, AUPRO</span></div>
+                </div>
+            </div>
+
+            <!-- Modules entraînés par phase -->
+            <div class="card">
+                <h3>🔄 Résumé des 3 Phases</h3>
+                <div style="font-size:0.62rem; color:var(--text-secondary);">
+                    <div style="display:flex; gap:0.3rem; align-items:center; margin-bottom:0.2rem;">
+                        <span class="badge badge-blue" style="font-size:0.5rem; min-width:50px;">Phase 1</span>
+                        <span>FPN + CMCA entraînés → 100 epochs → features alignées</span>
+                    </div>
+                    <div style="display:flex; gap:0.3rem; align-items:center; margin-bottom:0.2rem;">
+                        <span class="badge badge-orange" style="font-size:0.5rem; min-width:50px;">Phase 2</span>
+                        <span>Memory Bank construit → μ, σ des features normales</span>
+                    </div>
+                    <div style="display:flex; gap:0.3rem; align-items:center;">
+                        <span class="badge badge-red" style="font-size:0.5rem; min-width:50px;">Phase 3</span>
+                        <span>FP Filter + Fusion calibrés → 20 epochs → faux positifs supprimés</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 5 : STRUCTURE DU CODE                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide" data-index="4">
+    <div class="slide-tag a1">💻 Slide 5 — Structure du Code</div>
+    <h2 class="a2">Organisation & Implémentation</h2>
+    <div class="section-divider a2"></div>
+
+    <div class="grid-2 a3">
+        <!-- Arborescence -->
+        <div>
+            <div class="card" style="margin-bottom:0.7rem;">
+                <h3>📁 Arborescence du Projet</h3>
+                <div class="code-block" style="font-size:0.62rem; line-height:1.8;">
+<span class="st">CMAD-Net/</span>
+├── <span class="fn">train_cmad.py</span>          <span class="cm"># Script principal (2 phases)</span>
+├── <span class="st">requirements.txt</span>       <span class="cm"># Dépendances Python</span>
+│
+├── <span class="st">models/</span>                <span class="cm"># 🧠 Architecture du réseau</span>
+│   ├── <span class="fn">cmad_net.py</span>        <span class="cm"># Assemblage complet CMADNet</span>
+│   ├── <span class="fn">vit_encoder.py</span>     <span class="cm"># Backbone ViT-B/16 DINOv2</span>
+│   ├── <span class="fn">fpn.py</span>             <span class="cm"># Feature Pyramid Network</span>
+│   ├── <span class="fn">cmca.py</span>            <span class="cm"># Cross-Modal Cross-Attention</span>
+│   ├── <span class="fn">fp_filter.py</span>       <span class="cm"># False Positive Filter Module</span>
+│   └── <span class="fn">fusion.py</span>          <span class="cm"># Adaptive Score Fusion</span>
+│
+├── <span class="st">dataset/</span>               <span class="cm"># 📦 Chargement données</span>
+│   ├── <span class="fn">dataset_cmad.py</span>    <span class="cm"># Dataset MVTec 3D-AD</span>
+│   └── <span class="fn">geo_utils.py</span>       <span class="cm"># Depth → Normal Map (Sobel)</span>
+│
+├── <span class="st">utils/</span>
+│   └── <span class="fn">losses.py</span>          <span class="cm"># Loss de distillation inversée</span>
+│
+├── <span class="st">evaluation/</span>
+│   ├── <span class="fn">eval_utils.py</span>      <span class="cm"># Calcul cartes d'anomalies</span>
+│   └── <span class="fn">metrics_utils.py</span>   <span class="cm"># AUPRO officiel MVTec 3D-AD</span>
+│
+├── <span class="st">data/</span>                  <span class="cm"># 📂 10 catégories MVTec 3D-AD</span>
+└── <span class="st">logs/</span>                  <span class="cm"># 📝 Logs + checkpoints (.pth)</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📦 Dépendances Clés</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.3rem 1rem; font-size:0.68rem; color:var(--text-secondary); margin-top:0.3rem;">
+                    <div><span class="badge badge-blue" style="font-size:0.5rem;">core</span> <strong>torch</strong> ≥ 2.0</div>
+                    <div><span class="badge badge-blue" style="font-size:0.5rem;">core</span> <strong>torchvision</strong> ≥ 0.15</div>
+                    <div><span class="badge badge-purple" style="font-size:0.5rem;">model</span> <strong>timm</strong> ≥ 0.9 (ViT)</div>
+                    <div><span class="badge badge-cyan" style="font-size:0.5rem;">data</span> <strong>tifffile</strong> (depth maps)</div>
+                    <div><span class="badge badge-cyan" style="font-size:0.5rem;">data</span> <strong>opencv</strong> (Sobel)</div>
+                    <div><span class="badge badge-green" style="font-size:0.5rem;">eval</span> <strong>scikit-learn</strong> (AUROC)</div>
+                    <div><span class="badge badge-green" style="font-size:0.5rem;">eval</span> <strong>scipy</strong> (gaussian filter)</div>
+                    <div><span class="badge badge-orange" style="font-size:0.5rem;">util</span> <strong>numpy</strong>, <strong>pandas</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Extraits -->
+        <div style="display:flex; flex-direction:column; gap:0.7rem;">
+            <div class="card">
+                <h3 style="color:var(--accent-blue);">🧠 cmad_net.py — Extraction Features</h3>
+                <div class="code-block" style="font-size:0.6rem;">
+<span class="kw">class</span> <span class="fn">CMADNet</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">extract_features</span>(<span class="var">self</span>, rgb, depth):
+        <span class="cm"># 1. Backbone ViT (gelé)</span>
+        vit_rgb = <span class="var">self</span>.encoder(rgb)
+        vit_depth = <span class="var">self</span>.encoder(depth)
+        <span class="cm"># 2. FPN séparé par modalité</span>
+        fpn_rgb = <span class="var">self</span>.fpn_rgb(vit_rgb)
+        fpn_depth = <span class="var">self</span>.fpn_depth(vit_depth)
+        <span class="cm"># 3. CMCA — enrichissement cross-modal</span>
+        feat_rgb, feat_depth = <span class="var">self</span>.cmca(
+            fpn_rgb, fpn_depth)
+        <span class="kw">return</span> feat_rgb, feat_depth
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="color:var(--accent-red);">🛡️ fp_filter.py — Suppression Faux Positifs</h3>
+                <div class="code-block" style="font-size:0.6rem;">
+<span class="kw">class</span> <span class="fn">FPFilterModule</span>(nn.Module):
+    <span class="cm"># bg_estimator: Conv(1024→128→64→1) + Sigmoid</span>
+    <span class="cm"># adaptive_threshold (init 0.5)</span>
+    <span class="cm"># suppression_factor (init 0.3)</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="var">self</span>, anomaly_map, features):
+        bg_score = <span class="var">self</span>.bg_estimator(features)
+        <span class="cm"># Suppression du fond</span>
+        filtered = anomaly_map * (
+            <span class="num">1</span> - supp * bg_score)
+        <span class="cm"># Seuillage adaptatif</span>
+        filtered = <span class="fn">ReLU</span>(filtered - offset)
+        <span class="kw">return</span> filtered
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="color:var(--accent-orange);">📉 losses.py — Consistency + Diversity</h3>
+                <div class="code-block" style="font-size:0.6rem;">
+<span class="kw">def</span> <span class="fn">consistency_loss</span>(feat_rgb, feat_depth):
+    <span class="cm"># Aligner les features cross-modales</span>
+    <span class="kw">return</span> <span class="fn">mean</span>(<span class="num">1</span> - <span class="fn">cos_sim</span>(feat_rgb, feat_depth))
+
+<span class="kw">def</span> <span class="fn">diversity_loss</span>(features):
+    <span class="cm"># Décorréler les niveaux FPN</span>
+    <span class="kw">return</span> ‖F_i<sup>T</sup> × F_j‖²
+
+<span class="cm"># Phase 3 : FP loss</span>
+ℒ_fp = <span class="fn">mean</span>(fused²) + <span class="fn">mean</span>(rgb²) + <span class="fn">mean</span>(depth²)
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="color:var(--accent-purple);">🚀 train_cmad.py — Lancement</h3>
+                <div class="code-block" style="font-size:0.6rem;">
+<span class="cm"># Exécution simple :</span>
+$ python <span class="fn">train_cmad.py</span>
+
+<span class="cm"># Le script itère sur les 10 catégories :</span>
+<span class="kw">for</span> classname <span class="kw">in</span> CLASSNAMES:  <span class="cm"># 10 cat.</span>
+    setup_seed(<span class="num">42</span>)
+    model = <span class="fn">CMADNet</span>(n_categories=<span class="num">10</span>)
+    <span class="cm"># Phase 1 → Phase 2 → Phase 3 → Test</span>
+    <span class="fn">train_category</span>(device, classname, ...)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 6 : RÉSULTATS COMPLETS                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide" data-index="5">
+    <div class="slide-tag a1">📊 Slide 6 — Résultats Expérimentaux (10 catégories)</div>
+    <h2 class="a2">Résultats sur MVTec 3D-AD</h2>
+    <div class="section-divider a2"></div>
+
+    <!-- Hero Metrics (Averages) -->
+    <div class="grid-4 a3" style="margin-bottom:0.8rem;">
+        <div class="metric-big green"><div class="mv">0.783</div><div class="ml">I-AUROC moyen</div></div>
+        <div class="metric-big blue"><div class="mv">0.958</div><div class="ml">P-AUROC moyen</div></div>
+        <div class="metric-big purple"><div class="mv">0.838</div><div class="ml">AUPRO@30% moyen</div></div>
+        <div class="metric-big orange"><div class="mv">0.953</div><div class="ml">meilleur I-AUROC (rope)</div></div>
+    </div>
+
+    <!-- Full Results Table -->
+    <div class="a4">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">Catégorie</th>
+                    <th>I-AUROC ↑</th>
+                    <th>P-AUROC ↑</th>
+                    <th>AUPRO@30%</th>
+                    <th>AUPRO@10%</th>
+                    <th>AUPRO@5%</th>
+                    <th>AUPRO@1%</th>
+                    <th>I-AP</th>
+                    <th>P-AP</th>
+                    <th>I-F1</th>
+                    <th>P-F1</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>🥯 bagel</td>
+                    <td class="val-best">0.936</td><td class="val-good">0.969</td>
+                    <td class="val-good">0.792</td><td class="val-med">0.495</td><td class="val-med">0.335</td><td class="val-low">0.109</td>
+                    <td class="val-best">0.984</td><td class="val-med">0.202</td><td class="val-good">0.935</td><td class="val-med">0.307</td>
+                </tr>
+                <tr>
+                    <td>🔌 cable_gland</td>
+                    <td class="val-med">0.612</td><td class="val-good">0.939</td>
+                    <td class="val-good">0.807</td><td class="val-med">0.515</td><td class="val-med">0.345</td><td class="val-low">0.091</td>
+                    <td class="val-good">0.864</td><td class="val-low">0.046</td><td class="val-good">0.895</td><td class="val-low">0.085</td>
+                </tr>
+                <tr>
+                    <td>🥕 carrot</td>
+                    <td class="val-med">0.750</td><td class="val-best">0.977</td>
+                    <td class="val-best">0.922</td><td class="val-best">0.765</td><td class="val-good">0.583</td><td class="val-med">0.181</td>
+                    <td class="val-good">0.919</td><td class="val-low">0.079</td><td class="val-good">0.917</td><td class="val-med">0.152</td>
+                </tr>
+                <tr>
+                    <td>🍪 cookie</td>
+                    <td class="val-good">0.885</td><td class="val-good">0.965</td>
+                    <td class="val-best">0.872</td><td class="val-good">0.651</td><td class="val-med">0.462</td><td class="val-med">0.118</td>
+                    <td class="val-best">0.961</td><td class="val-med">0.247</td><td class="val-good">0.922</td><td class="val-med">0.331</td>
+                </tr>
+                <tr>
+                    <td>🪵 dowel</td>
+                    <td class="val-med">0.757</td><td class="val-good">0.962</td>
+                    <td class="val-good">0.847</td><td class="val-med">0.569</td><td class="val-med">0.358</td><td class="val-low">0.090</td>
+                    <td class="val-good">0.921</td><td class="val-low">0.062</td><td class="val-good">0.900</td><td class="val-low">0.100</td>
+                </tr>
+                <tr>
+                    <td>🧽 foam</td>
+                    <td class="val-med">0.677</td><td class="val-med">0.888</td>
+                    <td class="val-med">0.632</td><td class="val-med">0.381</td><td class="val-med">0.272</td><td class="val-low">0.100</td>
+                    <td class="val-good">0.900</td><td class="val-low">0.041</td><td class="val-good">0.904</td><td class="val-low">0.111</td>
+                </tr>
+                <tr>
+                    <td>🍑 peach</td>
+                    <td class="val-med">0.735</td><td class="val-good">0.959</td>
+                    <td class="val-good">0.842</td><td class="val-med">0.554</td><td class="val-med">0.338</td><td class="val-low">0.079</td>
+                    <td class="val-good">0.895</td><td class="val-low">0.070</td><td class="val-good">0.897</td><td class="val-low">0.107</td>
+                </tr>
+                <tr>
+                    <td>🥔 potato</td>
+                    <td class="val-low">0.540</td><td class="val-good">0.964</td>
+                    <td class="val-good">0.876</td><td class="val-good">0.633</td><td class="val-med">0.398</td><td class="val-low">0.079</td>
+                    <td class="val-med">0.804</td><td class="val-low">0.027</td><td class="val-good">0.897</td><td class="val-low">0.062</td>
+                </tr>
+                <tr>
+                    <td>🪢 rope</td>
+                    <td class="val-best">0.953</td><td class="val-best">0.982</td>
+                    <td class="val-good">0.866</td><td class="val-best">0.694</td><td class="val-good">0.530</td><td class="val-med">0.161</td>
+                    <td class="val-best">0.983</td><td class="val-med">0.209</td><td class="val-good">0.936</td><td class="val-med">0.278</td>
+                </tr>
+                <tr>
+                    <td>🛞 tire</td>
+                    <td class="val-med">0.688</td><td class="val-good">0.970</td>
+                    <td class="val-good">0.826</td><td class="val-med">0.528</td><td class="val-med">0.314</td><td class="val-low">0.068</td>
+                    <td class="val-good">0.887</td><td class="val-low">0.067</td><td class="val-good">0.906</td><td class="val-low">0.094</td>
+                </tr>
+                <tr class="row-avg">
+                    <td><strong>📊 MOYENNE</strong></td>
+                    <td>0.753</td><td>0.958</td>
+                    <td>0.828</td><td>0.579</td><td>0.394</td><td>0.108</td>
+                    <td>0.912</td><td>0.105</td><td>0.911</td><td>0.163</td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="display:flex; justify-content:space-between; margin-top:0.4rem;">
+            <span style="font-size:0.6rem; color:var(--text-muted);">* Seed 42 — 100 epochs Phase 1 — Reverse Distillation — CUDA</span>
+            <div>
+                <span class="badge badge-green" style="font-size:0.5rem;">BEST</span>
+                <span class="badge badge-cyan" style="font-size:0.5rem;">GOOD (>0.9)</span>
+                <span class="badge badge-orange" style="font-size:0.5rem;">MEDIUM</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis -->
+    <div class="grid-2 a5" style="margin-top:0.8rem;">
+        <div class="card">
+            <h3>📏 Métriques Expliquées</h3>
+            <div style="font-size:0.7rem; color:var(--text-secondary); line-height:1.7;">
+                <div><span class="badge badge-green" style="margin-right:3px;font-size:0.55rem;">IMG</span> <strong>I-AUROC</strong> — L'image contient-elle une anomalie ? (classification binaire)</div>
+                <div><span class="badge badge-blue" style="margin-right:3px;font-size:0.55rem;">PIX</span> <strong>P-AUROC</strong> — Chaque pixel est-il anomal ? (segmentation)</div>
+                <div><span class="badge badge-purple" style="margin-right:3px;font-size:0.55rem;">PIX</span> <strong>AUPRO@FPR</strong> — Per-Region Overlap à FPR max (5%, 10%, 30%)</div>
+                <div><span class="badge badge-orange" style="margin-right:3px;font-size:0.55rem;">IMG</span> <strong>I-AP / I-F1</strong> — Average Precision & F1-Score max</div>
+            </div>
+        </div>
+        <div class="insight">
+            <div class="insight-title">🔍 Analyse des résultats</div>
+            <p>
+                <strong>P-AUROC très élevé</strong> (0.958 moy.) : excellente segmentation pixel-level. 
+                <strong>Meilleures catégories</strong> : rope (0.953 I-AUROC) et bagel (0.936). 
+                <strong>I-AUROC plus variable</strong> (0.54–0.95) car la classification image est plus sensible aux faux positifs globaux.
+                La fusion adaptative ajuste automatiquement le ratio RGB/Depth selon l'objet.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 7 : CONCLUSION                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="slide" data-index="6">
+    <div class="slide-tag a1">🎯 Slide 7 — Conclusion</div>
+    <h2 class="a2">Conclusion & Perspectives</h2>
+    <div class="section-divider a2"></div>
+
+    <div class="grid-2 a3">
+        <div>
+            <div class="card" style="margin-bottom:0.7rem;">
+                <div class="card-icon" style="background:rgba(52,211,153,0.12);">✅</div>
+                <h3 style="color:var(--accent-green);">Ce qui a été réalisé</h3>
+                <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.8;">
+                    <div>✔ Architecture <strong>multi-modale</strong> complète (RGB + Depth 3D)</div>
+                    <div>✔ Paradigme <strong>Teacher-Student Reverse Distillation</strong> fonctionnel</div>
+                    <div>✔ <strong>Cross-Modal Attention</strong> (CMCA) pour fusion intelligente</div>
+                    <div>✔ Pipeline d'entraînement <strong>2 phases</strong> automatisé</div>
+                    <div>✔ Évaluation complète sur <strong>10 catégories</strong> MVTec 3D-AD</div>
+                    <div>✔ <strong>P-AUROC moyen 0.958</strong> — excellente segmentation pixel</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:0.7rem;">
+                <div class="card-icon" style="background:rgba(79,140,255,0.12);">📊</div>
+                <h3 style="color:var(--accent-blue);">Points Forts</h3>
+                <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.8;">
+                    <div>🏆 <strong>P-AUROC 0.982</strong> (rope) — segmentation quasi-parfaite</div>
+                    <div>🏆 <strong>I-AUROC 0.953</strong> (rope) — excellente classification</div>
+                    <div>🏆 <strong>AUPRO@30% 0.922</strong> (carrot) — localisation précise</div>
+                    <div>📉 Convergence stable en <strong>~75 epochs</strong></div>
+                    <div>🔀 Fusion adaptative <strong>par catégorie</strong> automatique</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background:rgba(239,68,68,0.12);">⚠️</div>
+                <h3 style="color:var(--accent-red);">Limitations Identifiées</h3>
+                <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.8;">
+                    <div>⚡ I-AUROC variable (0.54–0.95) selon la catégorie</div>
+                    <div>⚡ P-AP faible → précision de segmentation fine à améliorer</div>
+                    <div>⚡ Catégories complexes (potato, foam) plus difficiles</div>
+                    <div>⚡ Temps d'entraînement élevé (100 epochs × 10 catégories)</div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card" style="margin-bottom:0.7rem;">
+                <div class="card-icon" style="background:rgba(168,85,247,0.12);">🔮</div>
+                <h3 style="color:var(--accent-purple);">Améliorations Possibles</h3>
+                <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.8;">
+                    <div>1. <strong style="color:var(--accent-purple);">DINOv2 ViT-L/14</strong> — Backbone plus puissant (1024 dim)</div>
+                    <div>2. <strong style="color:var(--accent-cyan);">Multi-scale Student</strong> — Entrées multi-niveaux au lieu de P4 seul</div>
+                    <div>3. <strong style="color:var(--accent-orange);">Augmentation de données</strong> — CutPaste, rotation, bruit pour robustesse</div>
+                    <div>4. <strong style="color:var(--accent-green);">Post-traitement avancé</strong> — Adaptive Gaussian + seuillage par catégorie</div>
+                    <div>5. <strong style="color:var(--accent-pink);">Résolution plus élevée</strong> — 448×448 pour une meilleure granularité</div>
+                    <div>6. <strong style="color:var(--accent-blue);">Few-shot learning</strong> — Intégrer quelques exemples anomaux</div>
+                </div>
+            </div>
+
+            <!-- Key Takeaway -->
+            <div style="background:linear-gradient(135deg, rgba(79,140,255,0.1), rgba(168,85,247,0.1), rgba(52,211,153,0.1)); border:1px solid rgba(79,140,255,0.2); border-radius:12px; padding:1.2rem; margin-bottom:0.7rem;">
+                <div style="font-size:0.7rem; font-weight:700; color:var(--accent-blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">🎯 Message Principal</div>
+                <p style="font-size:0.85rem; color:var(--text-primary); line-height:1.7;">
+                    CMAD-Net démontre que la <strong>fusion cross-modale RGB+Depth</strong> combinée avec la <strong>Reverse Distillation</strong> est une approche viable pour la détection d'anomalies 3D non-supervisée. Le P-AUROC moyen de <strong style="color:var(--accent-green);">0.958</strong> confirme une <strong>excellente capacité de segmentation pixel-level</strong> des défauts.
+                </p>
+            </div>
+
+            <!-- Tech Stack Summary -->
+            <div class="card">
+                <h3>🛠️ Stack Technologique</h3>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:0.4rem;">
+                    <span class="badge badge-blue">Python 3.10+</span>
+                    <span class="badge badge-orange">PyTorch 2.0+</span>
+                    <span class="badge badge-purple">timm (ViT)</span>
+                    <span class="badge badge-cyan">OpenCV</span>
+                    <span class="badge badge-green">scikit-learn</span>
+                    <span class="badge badge-pink">scipy</span>
+                    <span class="badge badge-yellow">CUDA / CPU</span>
+                    <span class="badge badge-red">MVTec 3D-AD</span>
+                </div>
+                <div style="margin-top:0.6rem; font-size:0.7rem; color:var(--text-muted);">
+                    📝 Lancement : <code style="color:var(--accent-cyan);">python train_cmad.py</code> — entraîne les 10 catégories automatiquement avec seed 42.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="a4" style="text-align:center; margin-top:1rem;">
+        <div style="font-size:0.8rem; color:var(--text-muted);">Merci pour votre attention 🙏</div>
+    </div>
+</div>
+
+</div><!-- end slides-wrapper -->
+
+<!-- ── NAV BAR ── -->
+<div class="nav-bar">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Précédent</button>
+    <div style="display:flex; align-items:center; gap:1.2rem;">
+        <div class="nav-dots" id="navDots"></div>
+        <span class="slide-counter" id="slideCounter">1 / 7</span>
+    </div>
+    <button class="nav-btn" id="nextBtn" onclick="navigate(1)">Suivant →</button>
+</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let cur = 0;
+
+    const dots = document.getElementById('navDots');
+    for (let i = 0; i < total; i++) {
+        const d = document.createElement('button');
+        d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+        d.onclick = () => goTo(i);
+        dots.appendChild(d);
+    }
+
+    function goTo(idx) {
+        if (idx < 0 || idx >= total || idx === cur) return;
+        const old = slides[cur];
+        if (idx > cur) old.classList.add('exit-left');
+        else old.style.transform = 'translateX(60px)';
+        old.classList.remove('active');
+        setTimeout(() => { old.classList.remove('exit-left'); old.style.transform = ''; }, 500);
+        slides[idx].classList.add('active');
+        cur = idx;
+        document.getElementById('slideCounter').textContent = `${cur + 1} / ${total}`;
+        document.getElementById('prevBtn').disabled = cur === 0;
+        document.getElementById('nextBtn').disabled = cur === total - 1;
+        document.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+    }
+
+    function navigate(dir) { goTo(cur + dir); }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); navigate(1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); navigate(-1); }
+    });
+    let tx = 0;
+    document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+    document.addEventListener('touchend', e => { const d = tx - e.changedTouches[0].clientX; if (Math.abs(d) > 50) navigate(d > 0 ? 1 : -1); });
+</script>
+
+</body>
+</html>
